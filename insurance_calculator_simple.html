@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insurance Reserve Calculator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #27ae60, #229954);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-table th, .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .results-table th {
+            background: #34495e;
+            color: white;
+            font-weight: 600;
+        }
+
+        .results-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .results-table td.number {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏦 Insurance Reserve Calculator</h1>
+            <p>Sistem Perhitungan Cadangan Premi - Versi Sederhana</p>
+        </div>
+
+        <div class="main-grid">
+            <!-- Input Panel -->
+            <div class="panel">
+                <h3 class="section-title">📝 Input Data Polis</h3>
+                
+                <form id="policyForm">
+                    <div class="form-group">
+                        <label for="branch">Branch/Cabang:</label>
+                        <input type="text" id="branch" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cob">Class of Business (CoB):</label>
+                        <select id="cob" required>
+                            <option value="">Pilih CoB</option>
+                            <option value="Life">Life Insurance</option>
+                            <option value="Health">Health Insurance</option>
+                            <option value="Accident">Personal Accident</option>
+                            <option value="Travel">Travel Insurance</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="toc">Type of Coverage (ToC):</label>
+                        <input type="text" id="toc" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="coverageTerm">Coverage Term (bulan):</label>
+                        <input type="number" id="coverageTerm" min="1" max="600" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inforceDuration">Inforce Duration (bulan):</label>
+                        <input type="number" id="inforceDuration" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tsi">Total Sum Insured (Rp):</label>
+                        <input type="number" id="tsi" min="0" step="1000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="premium">Premium (Rp):</label>
+                        <input type="number" id="premium" min="0" step="100" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="commission">Commission (Rp):</label>
+                        <input type="number" id="commission" min="0" step="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sakRate">SAK Discount Rate (% per bulan):</label>
+                        <input type="number" id="sakRate" step="0.001" value="0.5" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sapRate">SAP Discount Rate (% per bulan):</label>
+                        <input type="number" id="sapRate" step="0.001" value="0.4" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">➕ Tambah Data</button>
+                </form>
+            </div>
+
+            <!-- Parameters Panel -->
+            <div class="panel">
+                <h3 class="section-title">⚙️ Parameter Perhitungan</h3>
+                
+                <div class="form-group">
+                    <label for="claimRate">Claim Rate (% per bulan):</label>
+                    <input type="number" id="claimRate" step="0.01" value="0.1" min="0" max="10">
+                </div>
+
+                <div class="form-group">
+                    <label for="surrenderRate">Surrender Rate (% per bulan):</label>
+                    <input type="number" id="surrenderRate" step="0.01" value="0.5" min="0" max="10">
+                </div>
+
+                <div class="form-group">
+                    <label for="expenseRate">Expense Rate (% per bulan):</label>
+                    <input type="number" id="expenseRate" step="0.01" value="0.05" min="0" max="5">
+                </div>
+
+                <button class="btn btn-success" onclick="calculateAllReserves()">🔄 Hitung Semua Cadangan</button>
+                
+                <h4 style="margin-top: 30px; color: #2c3e50;">📊 Database Management</h4>
+                
+                <button class="btn btn-warning" onclick="downloadDatabase()">📥 Download Database (Excel)</button>
+                <button class="btn btn-primary" onclick="clearDatabase()">🗑️ Clear Database</button>
+                
+                <div id="statusInfo" class="alert alert-info" style="margin-top: 15px;">
+                    <strong>Status:</strong> Database kosong
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="panel full-width">
+                <h3 class="section-title">📊 Hasil Perhitungan</h3>
+                
+                <div class="metrics-grid" id="metricsGrid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalPolicies">0</div>
+                        <div class="metric-label">Total Polis</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalTSI">Rp 0</div>
+                        <div class="metric-label">Total TSI</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalReserveSAK">Rp 0</div>
+                        <div class="metric-label">Total Reserve SAK</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalReserveSAP">Rp 0</div>
+                        <div class="metric-label">Total Reserve SAP</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="results-table" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Branch</th>
+                                <th>CoB</th>
+                                <th>ToC</th>
+                                <th>TSI</th>
+                                <th>Premium</th>
+                                <th>SAK Reserve</th>
+                                <th>SAP Reserve</th>
+                                <th>Remaining Term</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                            <tr>
+                                <td colspan="10" style="text-align: center; color: #666;">Belum ada data</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // In-memory database
+        let policyDatabase = [];
+        let policyCounter = 1;
+
+        // Load data from localStorage on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFromStorage();
+            updateDisplay();
+        });
+
+        // Save to localStorage
+        function saveToStorage() {
+            const data = {
+                policies: policyDatabase,
+                counter: policyCounter
+            };
+            // Note: In a real environment, you would use localStorage here
+            // localStorage.setItem('insuranceData', JSON.stringify(data));
+            console.log('Data saved:', data);
+        }
+
+        // Load from localStorage
+        function loadFromStorage() {
+            // Note: In a real environment, you would use localStorage here
+            // const stored = localStorage.getItem('insuranceData');
+            // if (stored) {
+            //     const data = JSON.parse(stored);
+            //     policyDatabase = data.policies || [];
+            //     policyCounter = data.counter || 1;
+            // }
+        }
+
+        // Form submission
+        document.getElementById('policyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                id: policyCounter++,
+                branch: document.getElementById('branch').value,
+                cob: document.getElementById('cob').value,
+                toc: document.getElementById('toc').value,
+                coverageTerm: parseInt(document.getElementById('coverageTerm').value),
+                inforceDuration: parseInt(document.getElementById('inforceDuration').value),
+                tsi: parseFloat(document.getElementById('tsi').value),
+                premium: parseFloat(document.getElementById('premium').value),
+                commission: parseFloat(document.getElementById('commission').value) || 0,
+                sakRate: parseFloat(document.getElementById('sakRate').value) / 100,
+                sapRate: parseFloat(document.getElementById('sapRate').value) / 100,
+                createdAt: new Date().toISOString()
+            };
+
+            // Calculate basic reserves
+            const remainingTerm = Math.max(0, formData.coverageTerm - formData.inforceDuration);
+            formData.remainingTerm = remainingTerm;
+            
+            // Simple reserve calculation
+            if (remainingTerm > 0) {
+                const claimRate = parseFloat(document.getElementById('claimRate').value) / 100;
+                const surrenderRate = parseFloat(document.getElementById('surrenderRate').value) / 100;
+                const expenseRate = parseFloat(document.getElementById('expenseRate').value) / 100;
+                
+                // Basic present value calculation
+                const avgDiscountSAK = Math.pow(1 + formData.sakRate, -remainingTerm/24);
+                const avgDiscountSAP = Math.pow(1 + formData.sapRate, -remainingTerm/24);
+                
+                const expectedClaims = formData.tsi * claimRate * remainingTerm;
+                const expectedExpenses = formData.premium * expenseRate * remainingTerm;
+                const expectedSurrenders = formData.tsi * surrenderRate * remainingTerm * 0.8;
+                
+                formData.sakReserve = (expectedClaims + expectedExpenses + expectedSurrenders) * avgDiscountSAK;
+                formData.sapReserve = (expectedClaims + expectedExpenses + expectedSurrenders) * avgDiscountSAP;
+            } else {
+                formData.sakReserve = 0;
+                formData.sapReserve = 0;
+            }
+
+            policyDatabase.push(formData);
+            saveToStorage();
+            updateDisplay();
+            
+            // Reset form
+            document.getElementById('policyForm').reset();
+            document.getElementById('sakRate').value = '0.5';
+            document.getElementById('sapRate').value = '0.4';
+            
+            alert('Data berhasil ditambahkan!');
+        });
+
+        function calculateAllReserves() {
+            const claimRate = parseFloat(document.getElementById('claimRate').value) / 100;
+            const surrenderRate = parseFloat(document.getElementById('surrenderRate').value) / 100;
+            const expenseRate = parseFloat(document.getElementById('expenseRate').value) / 100;
+
+            policyDatabase.forEach(policy => {
+                if (policy.remainingTerm > 0) {
+                    const avgDiscountSAK = Math.pow(1 + policy.sakRate, -policy.remainingTerm/24);
+                    const avgDiscountSAP = Math.pow(1 + policy.sapRate, -policy.remainingTerm/24);
+                    
+                    const expectedClaims = policy.tsi * claimRate * policy.remainingTerm;
+                    const expectedExpenses = policy.premium * expenseRate * policy.remainingTerm;
+                    const expectedSurrenders = policy.tsi * surrenderRate * policy.remainingTerm * 0.8;
+                    
+                    policy.sakReserve = (expectedClaims + expectedExpenses + expectedSurrenders) * avgDiscountSAK;
+                    policy.sapReserve = (expectedClaims + expectedExpenses + expectedSurrenders) * avgDiscountSAP;
+                    policy.lastCalculated = new Date().toISOString();
+                }
+            });
+
+            saveToStorage();
+            updateDisplay();
+            alert('Perhitungan cadangan berhasil diperbarui!');
+        }
+
+        function updateDisplay() {
+            // Update metrics
+            const totalPolicies = policyDatabase.length;
+            const totalTSI = policyDatabase.reduce((sum, p) => sum + p.tsi, 0);
+            const totalReserveSAK = policyDatabase.reduce((sum, p) => sum + (p.sakReserve || 0), 0);
+            const totalReserveSAP = policyDatabase.reduce((sum, p) => sum + (p.sapReserve || 0), 0);
+
+            document.getElementById('totalPolicies').textContent = totalPolicies.toLocaleString();
+            document.getElementById('totalTSI').textContent = 'Rp ' + totalTSI.toLocaleString();
+            document.getElementById('totalReserveSAK').textContent = 'Rp ' + Math.round(totalReserveSAK).toLocaleString();
+            document.getElementById('totalReserveSAP').textContent = 'Rp ' + Math.round(totalReserveSAP).toLocaleString();
+
+            // Update status
+            const statusInfo = document.getElementById('statusInfo');
+            if (totalPolicies === 0) {
+                statusInfo.innerHTML = '<strong>Status:</strong> Database kosong';
+                statusInfo.className = 'alert alert-info';
+            } else {
+                statusInfo.innerHTML = `<strong>Status:</strong> ${totalPolicies} polis dalam database`;
+                statusInfo.className = 'alert alert-success';
+            }
+
+            // Update table
+            const tbody = document.getElementById('resultsBody');
+            if (totalPolicies === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #666;">Belum ada data</td></tr>';
+            } else {
+                tbody.innerHTML = policyDatabase.map((policy, index) => `
+                    <tr>
+                        <td>${policy.id}</td>
+                        <td>${policy.branch}</td>
+                        <td>${policy.cob}</td>
+                        <td>${policy.toc}</td>
+                        <td class="number">Rp ${policy.tsi.toLocaleString()}</td>
+                        <td class="number">Rp ${policy.premium.toLocaleString()}</td>
+                        <td class="number">Rp ${Math.round(policy.sakReserve || 0).toLocaleString()}</td>
+                        <td class="number">Rp ${Math.round(policy.sapReserve || 0).toLocaleString()}</td>
+                        <td class="number">${policy.remainingTerm} bulan</td>
+                        <td><button onclick="deletePolicy(${index})" class="btn" style="background: #e74c3c; color: white; padding: 5px 10px; font-size: 12px;">❌</button></td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function deletePolicy(index) {
+            if (confirm('Yakin ingin menghapus data ini?')) {
+                policyDatabase.splice(index, 1);
+                saveToStorage();
+                updateDisplay();
+            }
+        }
+
+        function clearDatabase() {
+            if (confirm('Yakin ingin menghapus semua data?')) {
+                policyDatabase = [];
+                policyCounter = 1;
+                saveToStorage();
+                updateDisplay();
+                alert('Database berhasil dikosongkan!');
+            }
+        }
+
+        function downloadDatabase() {
+            if (policyDatabase.length === 0) {
+                alert('Database kosong, tidak ada data untuk didownload!');
+                return;
+            }
+
+            // Prepare data for Excel
+            const excelData = policyDatabase.map(policy => ({
+                'ID': policy.id,
+                'Branch': policy.branch,
+                'Class of Business': policy.cob,
+                'Type of Coverage': policy.toc,
+                'Coverage Term (Months)': policy.coverageTerm,
+                'Inforce Duration (Months)': policy.inforceDuration,
+                'Remaining Term (Months)': policy.remainingTerm,
+                'Total Sum Insured': policy.tsi,
+                'Premium': policy.premium,
+                'Commission': policy.commission,
+                'SAK Rate (%)': (policy.sakRate * 100).toFixed(3),
+                'SAP Rate (%)': (policy.sapRate * 100).toFixed(3),
+                'SAK Reserve': Math.round(policy.sakReserve || 0),
+                'SAP Reserve': Math.round(policy.sapReserve || 0),
+                'Created At': new Date(policy.createdAt).toLocaleDateString('id-ID'),
+                'Last Calculated': policy.lastCalculated ? new Date(policy.lastCalculated).toLocaleDateString('id-ID') : ''
+            }));
+
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(excelData);
+
+            // Add some styling (column widths)
+            const colWidths = [
+                {wch: 5},   // ID
+                {wch: 15},  // Branch
+                {wch: 20},  // CoB
+                {wch: 20},  // ToC
+                {wch: 15},  // Coverage Term
+                {wch: 15},  // Inforce Duration
+                {wch: 15},  // Remaining Term
+                {wch: 18},  // TSI
+                {wch: 15},  // Premium
+                {wch: 15},  // Commission
+                {wch: 12},  // SAK Rate
+                {wch: 12},  // SAP Rate
+                {wch: 18},  // SAK Reserve
+                {wch: 18},  // SAP Reserve
+                {wch: 15},  // Created At
+                {wch: 15}   // Last Calculated
+            ];
+            ws['!cols'] = colWidths;
+
+            XLSX.utils.book_append_sheet(wb, ws, "Insurance Database");
+
+            // Generate filename with timestamp
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            const filename = `Insurance_Database_${timestamp}.xlsx`;
+
+            // Download
+            XLSX.writeFile(wb, filename);
+            
+            alert(`Database berhasil didownload sebagai ${filename}`);
+        }
+    </script>
+</body>
+</html>
